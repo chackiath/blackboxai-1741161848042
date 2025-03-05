@@ -1,58 +1,79 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('loginForm');
-    const errorMessage = document.getElementById('errorMessage');
-    const errorText = document.getElementById('errorText');
+    // Check if user is already logged in
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && user.token) {
+        window.location.href = '/dashboard.html';
+        return;
+    }
 
-    // Mock user data (In a real application, this would be handled by the backend)
-    const mockUsers = [
-        { username: 'admin', password: 'admin123', role: 'admin' },
-        { username: 'manager', password: 'manager123', role: 'manager' },
-        { username: 'accountant', password: 'accountant123', role: 'accountant' },
-        { username: 'sales1', password: 'sales123', role: 'sales_agent' }
-    ];
+    const loginForm = document.querySelector('form');
+    const errorMessage = document.createElement('div');
+    errorMessage.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative hidden';
+    errorMessage.setAttribute('role', 'alert');
+    loginForm.insertBefore(errorMessage, loginForm.firstChild);
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
+        const username = document.querySelector('input[type="text"]').value;
+        const password = document.querySelector('input[type="password"]').value;
 
         try {
-            // Simulate API call with mock authentication
-            const user = mockUsers.find(u => u.username === username && u.password === password);
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
 
-            if (user) {
-                // Store user info in localStorage (in a real app, we'd store a JWT token)
+            const data = await response.json();
+
+            if (data.success) {
+                // Show success message
+                errorMessage.className = 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative';
+                errorMessage.textContent = 'Login successful! Redirecting...';
+                errorMessage.classList.remove('hidden');
+
+                // Store user data
                 localStorage.setItem('user', JSON.stringify({
-                    username: user.username,
-                    role: user.role
+                    ...data.user,
+                    token: data.token
                 }));
 
-                // Show success message
-                errorMessage.classList.remove('hidden');
-                errorMessage.classList.remove('bg-red-50', 'border-red-500');
-                errorMessage.classList.add('bg-green-50', 'border-green-500');
-                errorText.classList.remove('text-red-700');
-                errorText.classList.add('text-green-700');
-                errorText.textContent = 'Login successful! Redirecting...';
-
-                // Redirect to dashboard after a brief delay
+                // Redirect after a short delay
                 setTimeout(() => {
                     window.location.href = '/dashboard.html';
-                }, 1500);
+                }, 1000);
             } else {
-                throw new Error('Invalid username or password');
+                errorMessage.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
+                errorMessage.textContent = data.message || 'Invalid username or password';
+                errorMessage.classList.remove('hidden');
             }
         } catch (error) {
-            // Show error message
+            errorMessage.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
+            errorMessage.textContent = 'An error occurred. Please try again.';
             errorMessage.classList.remove('hidden');
-            errorText.textContent = error.message;
         }
     });
 
-    // Check if user is already logged in
-    const user = localStorage.getItem('user');
-    if (user) {
-        window.location.href = '/dashboard.html';
+    // Handle "Remember me" checkbox
+    const rememberMe = document.querySelector('input[type="checkbox"]');
+    if (rememberMe) {
+        const remembered = localStorage.getItem('rememberedUser');
+        if (remembered) {
+            const { username } = JSON.parse(remembered);
+            document.querySelector('input[type="text"]').value = username;
+            rememberMe.checked = true;
+        }
+
+        rememberMe.addEventListener('change', () => {
+            if (rememberMe.checked) {
+                const username = document.querySelector('input[type="text"]').value;
+                localStorage.setItem('rememberedUser', JSON.stringify({ username }));
+            } else {
+                localStorage.removeItem('rememberedUser');
+            }
+        });
     }
 });
