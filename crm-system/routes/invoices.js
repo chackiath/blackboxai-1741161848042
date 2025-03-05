@@ -1,198 +1,270 @@
 const express = require('express');
 const router = express.Router();
+const Invoice = require('../models/Invoice');
+const Lead = require('../models/Lead');
 
-// Mock invoices data (in a real app, this would be in a database)
-let invoices = [
-    {
-        id: 1,
-        invoiceNumber: 'PRF-2023001',
-        clientId: 1,
-        clientName: 'Tech Solutions Inc',
-        clientAddress: '123 Tech Street, Silicon Valley, CA 94025',
-        clientEmail: 'john@techsolutions.com',
-        date: '2023-06-15',
-        items: [
-            {
-                description: 'Enterprise Software License',
-                quantity: 1,
-                price: 50000,
-                total: 50000
-            }
-        ],
-        subtotal: 50000,
-        tax: 10000,
-        total: 60000,
-        notes: 'Payment due within 30 days',
-        status: 'draft',
-        createdBy: 'sales1'
-    }
-];
+// @route   GET /api/invoices
+// @desc    Get all invoices
+// @access  Private
+router.get('/', async (req, res) => {
+    try {
+        const query = {};
 
-// Get all invoices
-router.get('/', (req, res) => {
-    // In a real app, we would add pagination and filtering here
-    res.json({
-        success: true,
-        invoices: invoices
-    });
-});
+        // Filter by status if provided
+        if (req.query.status) {
+            query.status = req.query.status;
+        }
 
-// Get a single invoice
-router.get('/:id', (req, res) => {
-    const invoice = invoices.find(i => i.id === parseInt(req.params.id));
-    
-    if (invoice) {
+        // Filter by created user if sales agent
+        if (req.user.role === 'sales_agent') {
+            query.createdBy = req.user._id;
+        }
+
+        const invoices = await Invoice.find(query)
+            .populate('client', 'companyName contactPerson email')
+            .populate('createdBy', 'username name')
+            .sort({ createdAt: -1 });
+
         res.json({
             success: true,
-            invoice: invoice
+            invoices
         });
-    } else {
-        res.status(404).json({
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: 'Invoice not found'
+            message: error.message
         });
     }
 });
 
-// Create a new invoice
-router.post('/', (req, res) => {
-    const {
-        clientId,
-        clientName,
-        clientAddress,
-        clientEmail,
-        date,
-        items,
-        notes,
-        createdBy
-    } = req.body;
+// @route   GET /api/invoices/:id
+// @desc    Get a single invoice
+// @access  Private
+router.get('/:id', async (req, res) => {
+    try {
+        const invoice = await Invoice.findById(req.params.id)
+            .populate('client', 'companyName contactPerson email')
+            .populate('createdBy', 'username name');
 
-    // Validate required fields
-    if (!clientId || !clientName || !items || !items.length) {
-        return res.status(400).json({
+        if (!invoice) {
+            return res.status(404).json({
+                success: false,
+                message: 'Invoice not found'
+            });
+        }
+
+        // Check if user has access to this invoice
+        if (req.user.role === 'sales_agent' && invoice.createdBy._id.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to access this invoice'
+            });
+        }
+
+        res.json({
+            success: true,
+            invoice
+        });
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: 'Client information and items are required'
+            message: error.message
         });
     }
-
-    // Calculate totals
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    const tax = subtotal * 0.20; // 20% tax rate
-    const total = subtotal + tax;
-
-    const newInvoice = {
-        id: invoices.length + 1,
-        invoiceNumber: `PRF-${new Date().getFullYear()}${String(invoices.length + 1).padStart(3, '0')}`,
-        clientId,
-        clientName,
-        clientAddress,
-        clientEmail,
-        date: date || new Date().toISOString().split('T')[0],
-        items,
-        subtotal,
-        tax,
-        total,
-        notes,
-        status: 'draft',
-        createdBy,
-        createdAt: new Date().toISOString()
-    };
-
-    invoices.unshift(newInvoice);
-
-    res.status(201).json({
-        success: true,
-        invoice: newInvoice
-    });
 });
 
-// Update an invoice
-router.put('/:id', (req, res) => {
-    const invoiceId = parseInt(req.params.id);
-    const invoiceIndex = invoices.findIndex(i => i.id === invoiceId);
+// @route   POST /api/invoices
+// @desc    Create a new invoice
+// @access  Private
+router.post('/', async (req, res) => {
+    try {
+        const {
+            clientId,
+            items,
+            notes,
+            dueDate
+        } = req.body;
 
-    if (invoiceIndex === -1) {
-        return res.status(404).json({
+        // Verify client exists and is in 'won' status
+        const client = await Lead.findById(clientId);
+        if (!client) {
+            return res.status(404).json({
+                success: false,
+                message: 'Client not found'
+            });
+        }
+
+        if (client.status !== 'won') {
+            return res.status(400).json({
+                success: false,
+                message: 'Can only create invoices for won deals'
+            });
+        }
+
+        // Create invoice
+        const invoice = await Invoice.create({
+            client: clientId,
+            clientName: client.companyName,
+            clientAddress: client.address || 'No address provided',
+            clientEmail: client.email,
+            items,
+            notes,
+            dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+            createdBy: req.user._id
+        });
+
+        const populatedInvoice = await Invoice.findById(invoice._id)
+            .populate('client', 'companyName contactPerson email')
+            .populate('createdBy', 'username name');
+
+        res.status(201).json({
+            success: true,
+            invoice: populatedInvoice
+        });
+    } catch (error) {
+        res.status(400).json({
             success: false,
-            message: 'Invoice not found'
+            message: error.message
         });
     }
-
-    // If items are being updated, recalculate totals
-    let updatedInvoice = {
-        ...invoices[invoiceIndex],
-        ...req.body,
-        id: invoiceId // Ensure ID doesn't change
-    };
-
-    if (req.body.items) {
-        const subtotal = req.body.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-        const tax = subtotal * 0.20;
-        const total = subtotal + tax;
-
-        updatedInvoice = {
-            ...updatedInvoice,
-            subtotal,
-            tax,
-            total
-        };
-    }
-
-    invoices[invoiceIndex] = updatedInvoice;
-
-    res.json({
-        success: true,
-        invoice: updatedInvoice
-    });
 });
 
-// Delete an invoice
-router.delete('/:id', (req, res) => {
-    const invoiceId = parseInt(req.params.id);
-    const invoiceIndex = invoices.findIndex(i => i.id === invoiceId);
+// @route   PUT /api/invoices/:id
+// @desc    Update an invoice
+// @access  Private
+router.put('/:id', async (req, res) => {
+    try {
+        const invoice = await Invoice.findById(req.params.id);
 
-    if (invoiceIndex === -1) {
-        return res.status(404).json({
+        if (!invoice) {
+            return res.status(404).json({
+                success: false,
+                message: 'Invoice not found'
+            });
+        }
+
+        // Check if user has access to update this invoice
+        if (req.user.role === 'sales_agent' && invoice.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to update this invoice'
+            });
+        }
+
+        // Don't allow updates if invoice is paid
+        if (invoice.status === 'paid') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot update a paid invoice'
+            });
+        }
+
+        // Update invoice fields
+        Object.keys(req.body).forEach(key => {
+            invoice[key] = req.body[key];
+        });
+
+        const updatedInvoice = await invoice.save();
+        const populatedInvoice = await Invoice.findById(updatedInvoice._id)
+            .populate('client', 'companyName contactPerson email')
+            .populate('createdBy', 'username name');
+
+        res.json({
+            success: true,
+            invoice: populatedInvoice
+        });
+    } catch (error) {
+        res.status(400).json({
             success: false,
-            message: 'Invoice not found'
+            message: error.message
         });
     }
-
-    invoices = invoices.filter(i => i.id !== invoiceId);
-
-    res.json({
-        success: true,
-        message: 'Invoice deleted successfully'
-    });
 });
 
-// Update invoice status
-router.patch('/:id/status', (req, res) => {
-    const invoiceId = parseInt(req.params.id);
-    const { status } = req.body;
+// @route   DELETE /api/invoices/:id
+// @desc    Delete an invoice
+// @access  Private (Admin/Manager/Accountant only)
+router.delete('/:id', async (req, res) => {
+    try {
+        // Only admin, manager, and accountant can delete invoices
+        if (!['admin', 'manager', 'accountant'].includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to delete invoices'
+            });
+        }
 
-    const invoiceIndex = invoices.findIndex(i => i.id === invoiceId);
+        const invoice = await Invoice.findById(req.params.id);
 
-    if (invoiceIndex === -1) {
-        return res.status(404).json({
+        if (!invoice) {
+            return res.status(404).json({
+                success: false,
+                message: 'Invoice not found'
+            });
+        }
+
+        // Don't allow deletion of paid invoices
+        if (invoice.status === 'paid') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot delete a paid invoice'
+            });
+        }
+
+        await invoice.remove();
+
+        res.json({
+            success: true,
+            message: 'Invoice deleted successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: 'Invoice not found'
+            message: error.message
         });
     }
+});
 
-    if (!status) {
-        return res.status(400).json({
+// @route   PATCH /api/invoices/:id/status
+// @desc    Update invoice status
+// @access  Private (Admin/Manager/Accountant only)
+router.patch('/:id/status', async (req, res) => {
+    try {
+        // Only admin, manager, and accountant can update invoice status
+        if (!['admin', 'manager', 'accountant'].includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to update invoice status'
+            });
+        }
+
+        const { status } = req.body;
+        const invoice = await Invoice.findById(req.params.id);
+
+        if (!invoice) {
+            return res.status(404).json({
+                success: false,
+                message: 'Invoice not found'
+            });
+        }
+
+        invoice.status = status;
+        const updatedInvoice = await invoice.save();
+
+        const populatedInvoice = await Invoice.findById(updatedInvoice._id)
+            .populate('client', 'companyName contactPerson email')
+            .populate('createdBy', 'username name');
+
+        res.json({
+            success: true,
+            invoice: populatedInvoice
+        });
+    } catch (error) {
+        res.status(400).json({
             success: false,
-            message: 'Status is required'
+            message: error.message
         });
     }
-
-    invoices[invoiceIndex].status = status;
-
-    res.json({
-        success: true,
-        invoice: invoices[invoiceIndex]
-    });
 });
 
 module.exports = router;
