@@ -11,243 +11,152 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        .kanban-container {
+            overflow-x: auto;
+            min-height: calc(100vh - 150px);
+        }
         .kanban-column {
-            min-height: calc(100vh - 200px);
+            min-width: 300px;
+            max-width: 300px;
         }
-        .deal-card {
-            cursor: grab;
+        .kanban-cards {
+            min-height: 100px;
         }
-        .deal-card:active {
-            cursor: grabbing;
-        }
-        .deal-card.dragging {
+        .draggable.dragging {
             opacity: 0.5;
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Sidebar -->
-    <div class="fixed inset-y-0 left-0 w-64 bg-indigo-700 text-white transition-transform duration-300 transform z-30" id="sidebar">
-        <div class="flex items-center justify-between p-4 border-b border-indigo-600">
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-chart-line text-2xl"></i>
-                <span class="text-xl font-semibold">CRM System</span>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="bg-indigo-700 w-64 min-h-screen flex flex-col transition-transform duration-200 ease-in-out transform -translate-x-full md:translate-x-0">
+            <div class="p-4">
+                <div class="flex items-center justify-between text-white mb-6">
+                    <h2 class="text-2xl font-bold">CRM System</h2>
+                    <button id="mobile-close" class="md:hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <nav>
+                    <a href="/dashboard.html" class="flex items-center text-gray-300 py-2 px-4 hover:bg-indigo-600 rounded-lg">
+                        <i class="fas fa-chart-line w-6"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="/leads.html" class="flex items-center text-gray-300 py-2 px-4 hover:bg-indigo-600 rounded-lg">
+                        <i class="fas fa-user-tie w-6"></i>
+                        <span>Leads</span>
+                    </a>
+                    <a href="/kanban.html" class="flex items-center bg-indigo-800 text-white py-2 px-4 rounded-lg">
+                        <i class="fas fa-columns w-6"></i>
+                        <span>Kanban</span>
+                    </a>
+                    <a href="/invoice.html" class="flex items-center text-gray-300 py-2 px-4 hover:bg-indigo-600 rounded-lg">
+                        <i class="fas fa-file-invoice-dollar w-6"></i>
+                        <span>Invoices</span>
+                    </a>
+                </nav>
             </div>
-            <button id="mobile-close" class="lg:hidden">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        
-        <nav class="mt-4">
-            <div class="px-4 py-2 text-xs uppercase text-indigo-300">Main</div>
-            <a href="/dashboard.html" class="flex items-center px-4 py-3 text-indigo-100 hover:bg-indigo-600">
-                <i class="fas fa-home w-6"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="/leads.html" class="flex items-center px-4 py-3 text-indigo-100 hover:bg-indigo-600">
-                <i class="fas fa-user-plus w-6"></i>
-                <span>Leads</span>
-            </a>
-            <a href="/kanban.html" class="flex items-center px-4 py-3 text-white bg-indigo-800">
-                <i class="fas fa-columns w-6"></i>
-                <span>Kanban Board</span>
-            </a>
-            <a href="/invoice.html" class="flex items-center px-4 py-3 text-indigo-100 hover:bg-indigo-600">
-                <i class="fas fa-file-invoice-dollar w-6"></i>
-                <span>Invoices</span>
-            </a>
         </nav>
-    </div>
 
-    <!-- Main Content -->
-    <div class="lg:ml-64">
-        <!-- Top Navigation -->
-        <header class="bg-white shadow-sm">
-            <div class="flex items-center justify-between px-4 py-3">
-                <button id="mobile-menu" class="lg:hidden">
-                    <i class="fas fa-bars text-gray-600 text-2xl"></i>
-                </button>
-                
-                <div class="flex items-center space-x-4">
-                    <div class="relative" id="userDropdown">
-                        <button class="flex items-center space-x-2 focus:outline-none">
-                            <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                                <i class="fas fa-user text-white"></i>
-                            </div>
-                            <span class="text-gray-700" id="username">User</span>
-                            <i class="fas fa-chevron-down text-gray-400"></i>
+        <!-- Main Content -->
+        <div class="flex-1">
+            <!-- Top Navigation -->
+            <header class="bg-white shadow">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div class="flex justify-between items-center">
+                        <button id="mobile-menu" class="md:hidden text-gray-500">
+                            <i class="fas fa-bars"></i>
                         </button>
-                        <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden" id="userMenu">
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" id="logoutBtn">Logout</a>
+                        <div class="relative" id="userDropdown">
+                            <button class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
+                                <i class="fas fa-user-circle text-xl"></i>
+                                <span id="username" class="font-medium"></span>
+                                <i class="fas fa-chevron-down text-sm"></i>
+                            </button>
+                            <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                                <a href="#" id="logoutBtn" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </header>
-
-        <!-- Main Content Area -->
-        <main class="p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold text-gray-800">Deal Pipeline</h1>
-                <div class="flex space-x-4">
-                    <button id="collapseAll" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors duration-200">
-                        <i class="fas fa-compress-alt mr-2"></i>Collapse All
-                    </button>
-                    <button id="expandAll" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors duration-200">
-                        <i class="fas fa-expand-alt mr-2"></i>Expand All
-                    </button>
-                </div>
-            </div>
+            </header>
 
             <!-- Kanban Board -->
-            <div class="flex space-x-4 overflow-x-auto pb-4">
-                <!-- New Leads -->
-                <div class="flex-none w-80">
-                    <div class="bg-white rounded-lg shadow-sm">
-                        <div class="p-4 border-b border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-3 h-3 rounded-full bg-blue-500"></div>
-                                    <h3 class="font-semibold text-gray-800">New Leads</h3>
-                                </div>
-                                <span class="text-sm text-gray-500" id="newCount">0</span>
-                            </div>
-                        </div>
-                        <div class="p-4 kanban-column" data-status="new">
-                            <!-- Cards will be dynamically added here -->
-                        </div>
-                    </div>
+            <main class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold text-gray-900">Deal Pipeline</h1>
                 </div>
 
-                <!-- Contacted -->
-                <div class="flex-none w-80">
-                    <div class="bg-white rounded-lg shadow-sm">
-                        <div class="p-4 border-b border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                    <h3 class="font-semibold text-gray-800">Contacted</h3>
-                                </div>
-                                <span class="text-sm text-gray-500" id="contactedCount">0</span>
-                            </div>
-                        </div>
-                        <div class="p-4 kanban-column" data-status="contacted">
-                            <!-- Cards will be dynamically added here -->
-                        </div>
+                <div class="kanban-container flex space-x-4 pb-8">
+                    <!-- New -->
+                    <div class="kanban-column bg-gray-50 rounded-lg p-4" data-status="new">
+                        <h3 class="font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-flag text-blue-500 mr-2"></i>
+                            New
+                        </h3>
+                        <div class="kanban-cards"></div>
+                    </div>
+
+                    <!-- Contacted -->
+                    <div class="kanban-column bg-gray-50 rounded-lg p-4" data-status="contacted">
+                        <h3 class="font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-phone text-yellow-500 mr-2"></i>
+                            Contacted
+                        </h3>
+                        <div class="kanban-cards"></div>
+                    </div>
+
+                    <!-- Qualified -->
+                    <div class="kanban-column bg-gray-50 rounded-lg p-4" data-status="qualified">
+                        <h3 class="font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                            Qualified
+                        </h3>
+                        <div class="kanban-cards"></div>
+                    </div>
+
+                    <!-- Proposal -->
+                    <div class="kanban-column bg-gray-50 rounded-lg p-4" data-status="proposal">
+                        <h3 class="font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-file-alt text-purple-500 mr-2"></i>
+                            Proposal
+                        </h3>
+                        <div class="kanban-cards"></div>
+                    </div>
+
+                    <!-- Negotiation -->
+                    <div class="kanban-column bg-gray-50 rounded-lg p-4" data-status="negotiation">
+                        <h3 class="font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-comments text-indigo-500 mr-2"></i>
+                            Negotiation
+                        </h3>
+                        <div class="kanban-cards"></div>
+                    </div>
+
+                    <!-- Won -->
+                    <div class="kanban-column bg-gray-50 rounded-lg p-4" data-status="won">
+                        <h3 class="font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-trophy text-green-500 mr-2"></i>
+                            Won
+                        </h3>
+                        <div class="kanban-cards"></div>
+                    </div>
+
+                    <!-- Lost -->
+                    <div class="kanban-column bg-gray-50 rounded-lg p-4" data-status="lost">
+                        <h3 class="font-medium text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-times-circle text-red-500 mr-2"></i>
+                            Lost
+                        </h3>
+                        <div class="kanban-cards"></div>
                     </div>
                 </div>
-
-                <!-- Qualified -->
-                <div class="flex-none w-80">
-                    <div class="bg-white rounded-lg shadow-sm">
-                        <div class="p-4 border-b border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                                    <h3 class="font-semibold text-gray-800">Qualified</h3>
-                                </div>
-                                <span class="text-sm text-gray-500" id="qualifiedCount">0</span>
-                            </div>
-                        </div>
-                        <div class="p-4 kanban-column" data-status="qualified">
-                            <!-- Cards will be dynamically added here -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Proposal -->
-                <div class="flex-none w-80">
-                    <div class="bg-white rounded-lg shadow-sm">
-                        <div class="p-4 border-b border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-3 h-3 rounded-full bg-purple-500"></div>
-                                    <h3 class="font-semibold text-gray-800">Proposal</h3>
-                                </div>
-                                <span class="text-sm text-gray-500" id="proposalCount">0</span>
-                            </div>
-                        </div>
-                        <div class="p-4 kanban-column" data-status="proposal">
-                            <!-- Cards will be dynamically added here -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Negotiation -->
-                <div class="flex-none w-80">
-                    <div class="bg-white rounded-lg shadow-sm">
-                        <div class="p-4 border-b border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-3 h-3 rounded-full bg-indigo-500"></div>
-                                    <h3 class="font-semibold text-gray-800">Negotiation</h3>
-                                </div>
-                                <span class="text-sm text-gray-500" id="negotiationCount">0</span>
-                            </div>
-                        </div>
-                        <div class="p-4 kanban-column" data-status="negotiation">
-                            <!-- Cards will be dynamically added here -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Won -->
-                <div class="flex-none w-80">
-                    <div class="bg-white rounded-lg shadow-sm">
-                        <div class="p-4 border-b border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-3 h-3 rounded-full bg-green-600"></div>
-                                    <h3 class="font-semibold text-gray-800">Won</h3>
-                                </div>
-                                <span class="text-sm text-gray-500" id="wonCount">0</span>
-                            </div>
-                        </div>
-                        <div class="p-4 kanban-column" data-status="won">
-                            <!-- Cards will be dynamically added here -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Lost -->
-                <div class="flex-none w-80">
-                    <div class="bg-white rounded-lg shadow-sm">
-                        <div class="p-4 border-b border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                                    <h3 class="font-semibold text-gray-800">Lost</h3>
-                                </div>
-                                <span class="text-sm text-gray-500" id="lostCount">0</span>
-                            </div>
-                        </div>
-                        <div class="p-4 kanban-column" data-status="lost">
-                            <!-- Cards will be dynamically added here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Card Template (hidden) -->
-    <template id="dealCardTemplate">
-        <div class="deal-card bg-white rounded-lg shadow-sm p-4 mb-4" draggable="true">
-            <div class="flex justify-between items-start mb-3">
-                <h4 class="font-medium text-gray-900 card-company"></h4>
-                <span class="text-sm font-medium text-gray-600 card-value"></span>
-            </div>
-            <div class="text-sm text-gray-600 mb-2 card-contact"></div>
-            <div class="flex justify-between items-center">
-                <div class="flex items-center">
-                    <i class="fas fa-user-circle text-gray-400 mr-2"></i>
-                    <span class="text-sm text-gray-600 card-assigned"></span>
-                </div>
-                <div class="text-xs text-gray-500 card-date"></div>
-            </div>
+            </main>
         </div>
-    </template>
+    </div>
 
     <script src="/js/kanban.js"></script>
 </body>
