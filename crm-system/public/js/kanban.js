@@ -9,220 +9,147 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update UI with user information
     document.getElementById('username').textContent = user.username;
 
-    // Mock data for deals (in a real app, this would come from an API)
-    let deals = [
-        {
-            id: 1,
-            companyName: 'Tech Solutions Inc',
-            contactPerson: 'John Smith',
-            email: 'john@techsolutions.com',
-            value: 50000,
-            status: 'qualified',
-            assignedTo: 'sales1',
-            createdAt: '2023-06-15'
-        },
-        {
-            id: 2,
-            companyName: 'Digital Innovations',
-            contactPerson: 'Sarah Johnson',
-            email: 'sarah@digitalinnovations.com',
-            value: 25000,
-            status: 'contacted',
-            assignedTo: 'sales2',
-            createdAt: '2023-06-16'
-        }
-    ];
+    // Kanban columns
+    const columns = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
+    
+    // Initialize drag and drop
+    function initializeDragAndDrop() {
+        const draggables = document.querySelectorAll('.draggable');
+        const containers = document.querySelectorAll('.kanban-column');
 
-    // DOM elements
-    const kanbanColumns = document.querySelectorAll('.kanban-column');
-    const cardTemplate = document.getElementById('dealCardTemplate');
-    const collapseAllBtn = document.getElementById('collapseAll');
-    const expandAllBtn = document.getElementById('expandAll');
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', () => {
+                draggable.classList.add('dragging');
+            });
 
-    // Initialize counters
-    const statusCounts = {
-        new: 0,
-        contacted: 0,
-        qualified: 0,
-        proposal: 0,
-        negotiation: 0,
-        won: 0,
-        lost: 0
-    };
+            draggable.addEventListener('dragend', async () => {
+                draggable.classList.remove('dragging');
+                const newStatus = draggable.closest('.kanban-column').dataset.status;
+                const leadId = draggable.dataset.id;
+                
+                try {
+                    const response = await fetch(`/api/leads/${leadId}/status`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${user.token}`
+                        },
+                        body: JSON.stringify({ status: newStatus })
+                    });
 
-    // Create a deal card from template
-    function createDealCard(deal) {
-        const card = cardTemplate.content.cloneNode(true);
-        const cardElement = card.querySelector('.deal-card');
-        
-        cardElement.dataset.id = deal.id;
-        cardElement.querySelector('.card-company').textContent = deal.companyName;
-        cardElement.querySelector('.card-value').textContent = `$${deal.value.toLocaleString()}`;
-        cardElement.querySelector('.card-contact').textContent = deal.contactPerson;
-        cardElement.querySelector('.card-assigned').textContent = deal.assignedTo;
-        cardElement.querySelector('.card-date').textContent = new Date(deal.createdAt).toLocaleDateString();
+                    const data = await response.json();
+                    if (!data.success) {
+                        throw new Error(data.message);
+                    }
 
-        // Add drag and drop event listeners
-        cardElement.addEventListener('dragstart', handleDragStart);
-        cardElement.addEventListener('dragend', handleDragEnd);
-
-        return cardElement;
-    }
-
-    // Render all deals
-    function renderDeals() {
-        // Reset counters
-        Object.keys(statusCounts).forEach(status => {
-            statusCounts[status] = 0;
-        });
-
-        // Clear all columns
-        kanbanColumns.forEach(column => {
-            column.innerHTML = '';
-        });
-
-        // Distribute deals to columns
-        deals.forEach(deal => {
-            const column = document.querySelector(`.kanban-column[data-status="${deal.status}"]`);
-            if (column) {
-                column.appendChild(createDealCard(deal));
-                statusCounts[deal.status]++;
-            }
-        });
-
-        // Update counters
-        Object.keys(statusCounts).forEach(status => {
-            const counter = document.getElementById(`${status}Count`);
-            if (counter) {
-                counter.textContent = statusCounts[status];
-            }
-        });
-    }
-
-    // Drag and drop functionality
-    let draggedCard = null;
-
-    function handleDragStart(e) {
-        draggedCard = this;
-        this.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', this.dataset.id);
-    }
-
-    function handleDragEnd(e) {
-        this.classList.remove('dragging');
-        draggedCard = null;
-        
-        // Update counters after drag
-        updateCounters();
-    }
-
-    function handleDragOver(e) {
-        e.preventDefault();
-        return false;
-    }
-
-    function handleDragEnter(e) {
-        e.preventDefault();
-    }
-
-    function handleDrop(e) {
-        e.preventDefault();
-        if (!draggedCard) return;
-
-        const column = this;
-        const newStatus = column.dataset.status;
-        const dealId = parseInt(draggedCard.dataset.id);
-        
-        // Update deal status
-        const deal = deals.find(d => d.id === dealId);
-        if (deal) {
-            deal.status = newStatus;
-            
-            // In a real app, you would make an API call here to update the status
-            console.log(`Updated deal ${dealId} status to ${newStatus}`);
-            
-            // Re-render the board
-            renderDeals();
-        }
-
-        return false;
-    }
-
-    // Add drag and drop event listeners to columns
-    kanbanColumns.forEach(column => {
-        column.addEventListener('dragover', handleDragOver);
-        column.addEventListener('dragenter', handleDragEnter);
-        column.addEventListener('drop', handleDrop);
-    });
-
-    // Update counters
-    function updateCounters() {
-        Object.keys(statusCounts).forEach(status => {
-            const count = deals.filter(deal => deal.status === status).length;
-            const counter = document.getElementById(`${status}Count`);
-            if (counter) {
-                counter.textContent = count;
-            }
-        });
-    }
-
-    // Collapse/Expand functionality
-    let isCollapsed = false;
-
-    collapseAllBtn.addEventListener('click', () => {
-        const cards = document.querySelectorAll('.deal-card');
-        if (!isCollapsed) {
-            cards.forEach(card => {
-                const details = card.querySelector('.card-details');
-                if (details) {
-                    details.classList.add('hidden');
+                    showNotification('Lead status updated successfully', 'success');
+                } catch (error) {
+                    console.error('Error updating lead status:', error);
+                    showNotification('Failed to update lead status', 'error');
+                    loadLeads(); // Reload to revert to original position
                 }
             });
-            isCollapsed = true;
-        }
-    });
+        });
 
-    expandAllBtn.addEventListener('click', () => {
-        const cards = document.querySelectorAll('.deal-card');
-        if (isCollapsed) {
-            cards.forEach(card => {
-                const details = card.querySelector('.card-details');
-                if (details) {
-                    details.classList.remove('hidden');
+        containers.forEach(container => {
+            container.addEventListener('dragover', e => {
+                e.preventDefault();
+                const draggable = document.querySelector('.dragging');
+                if (draggable) {
+                    const afterElement = getDragAfterElement(container, e.clientY);
+                    if (afterElement) {
+                        container.insertBefore(draggable, afterElement);
+                    } else {
+                        container.appendChild(draggable);
+                    }
                 }
             });
-            isCollapsed = false;
+        });
+    }
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.draggable:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    // Load leads and populate kanban board
+    async function loadLeads() {
+        try {
+            const response = await fetch('/api/leads', {
+                headers: {
+                    'Authorization': `Bearer ${user.token}`
+                }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                // Clear existing cards
+                columns.forEach(status => {
+                    const column = document.querySelector(`[data-status="${status}"]`);
+                    const cardsContainer = column.querySelector('.kanban-cards');
+                    cardsContainer.innerHTML = '';
+                });
+
+                // Add leads to appropriate columns
+                data.leads.forEach(lead => {
+                    const column = document.querySelector(`[data-status="${lead.status}"]`);
+                    if (column) {
+                        const cardsContainer = column.querySelector('.kanban-cards');
+                        const card = createLeadCard(lead);
+                        cardsContainer.appendChild(card);
+                    }
+                });
+
+                // Initialize drag and drop after adding cards
+                initializeDragAndDrop();
+            }
+        } catch (error) {
+            console.error('Error loading leads:', error);
+            showNotification('Error loading leads', 'error');
         }
-    });
+    }
 
-    // Mobile menu functionality
-    const sidebar = document.getElementById('sidebar');
-    const mobileMenuBtn = document.getElementById('mobile-menu');
-    const mobileCloseBtn = document.getElementById('mobile-close');
+    // Create lead card element
+    function createLeadCard(lead) {
+        const card = document.createElement('div');
+        card.className = 'draggable bg-white p-4 rounded-lg shadow mb-3 cursor-move';
+        card.draggable = true;
+        card.dataset.id = lead.id;
 
-    mobileMenuBtn.addEventListener('click', () => {
-        sidebar.classList.remove('-translate-x-full');
-    });
+        const value = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(lead.value);
 
-    mobileCloseBtn.addEventListener('click', () => {
-        sidebar.classList.add('-translate-x-full');
-    });
+        card.innerHTML = `
+            <div class="font-medium text-gray-900 mb-1">${lead.companyName}</div>
+            <div class="text-sm text-gray-600 mb-2">${lead.contactPerson}</div>
+            <div class="text-sm font-medium text-indigo-600">${value}</div>
+        `;
 
-    // User dropdown functionality
-    const userDropdown = document.getElementById('userDropdown');
-    const userMenu = document.getElementById('userMenu');
+        return card;
+    }
 
-    userDropdown.addEventListener('click', () => {
-        userMenu.classList.toggle('hidden');
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!userDropdown.contains(e.target)) {
-            userMenu.classList.add('hidden');
-        }
-    });
+    // Show notification
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
 
     // Logout functionality
     const logoutBtn = document.getElementById('logoutBtn');
@@ -232,6 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/index.html';
     });
 
-    // Initialize the board
-    renderDeals();
+    // Load leads on page load
+    loadLeads();
 });
