@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM - Lead Management</title>
+    <title>CRM - Leads Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -13,175 +13,146 @@
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Sidebar (Same as dashboard.html) -->
-    <div class="fixed inset-y-0 left-0 w-64 bg-indigo-700 text-white transition-transform duration-300 transform z-30" id="sidebar">
-        <div class="flex items-center justify-between p-4 border-b border-indigo-600">
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-chart-line text-2xl"></i>
-                <span class="text-xl font-semibold">CRM System</span>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="bg-indigo-700 w-64 min-h-screen flex flex-col transition-transform duration-200 ease-in-out transform -translate-x-full md:translate-x-0">
+            <div class="p-4">
+                <div class="flex items-center justify-between text-white mb-6">
+                    <h2 class="text-2xl font-bold">CRM System</h2>
+                    <button id="mobile-close" class="md:hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <nav>
+                    <a href="/dashboard.html" class="flex items-center text-gray-300 py-2 px-4 hover:bg-indigo-600 rounded-lg">
+                        <i class="fas fa-chart-line w-6"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="/leads.html" class="flex items-center bg-indigo-800 text-white py-2 px-4 rounded-lg">
+                        <i class="fas fa-user-tie w-6"></i>
+                        <span>Leads</span>
+                    </a>
+                    <a href="/kanban.html" class="flex items-center text-gray-300 py-2 px-4 hover:bg-indigo-600 rounded-lg">
+                        <i class="fas fa-columns w-6"></i>
+                        <span>Kanban</span>
+                    </a>
+                    <a href="/invoice.html" class="flex items-center text-gray-300 py-2 px-4 hover:bg-indigo-600 rounded-lg">
+                        <i class="fas fa-file-invoice-dollar w-6"></i>
+                        <span>Invoices</span>
+                    </a>
+                </nav>
             </div>
-            <button id="mobile-close" class="lg:hidden">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        
-        <nav class="mt-4">
-            <div class="px-4 py-2 text-xs uppercase text-indigo-300">Main</div>
-            <a href="/dashboard.html" class="flex items-center px-4 py-3 text-indigo-100 hover:bg-indigo-600">
-                <i class="fas fa-home w-6"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="/leads.html" class="flex items-center px-4 py-3 text-white bg-indigo-800">
-                <i class="fas fa-user-plus w-6"></i>
-                <span>Leads</span>
-            </a>
-            <a href="/kanban.html" class="flex items-center px-4 py-3 text-indigo-100 hover:bg-indigo-600">
-                <i class="fas fa-columns w-6"></i>
-                <span>Kanban Board</span>
-            </a>
-            <a href="/invoice.html" class="flex items-center px-4 py-3 text-indigo-100 hover:bg-indigo-600">
-                <i class="fas fa-file-invoice-dollar w-6"></i>
-                <span>Invoices</span>
-            </a>
         </nav>
-    </div>
 
-    <!-- Main Content -->
-    <div class="lg:ml-64">
-        <!-- Top Navigation -->
-        <header class="bg-white shadow-sm">
-            <div class="flex items-center justify-between px-4 py-3">
-                <button id="mobile-menu" class="lg:hidden">
-                    <i class="fas fa-bars text-gray-600 text-2xl"></i>
-                </button>
-                
-                <div class="flex items-center space-x-4">
-                    <div class="relative" id="userDropdown">
-                        <button class="flex items-center space-x-2 focus:outline-none">
-                            <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                                <i class="fas fa-user text-white"></i>
-                            </div>
-                            <span class="text-gray-700" id="username">User</span>
-                            <i class="fas fa-chevron-down text-gray-400"></i>
+        <!-- Main Content -->
+        <div class="flex-1">
+            <!-- Top Navigation -->
+            <header class="bg-white shadow">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div class="flex justify-between items-center">
+                        <button id="mobile-menu" class="md:hidden text-gray-500">
+                            <i class="fas fa-bars"></i>
                         </button>
-                        <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden" id="userMenu">
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" id="logoutBtn">Logout</a>
+                        <div class="relative" id="userDropdown">
+                            <button class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
+                                <i class="fas fa-user-circle text-xl"></i>
+                                <span id="username" class="font-medium"></span>
+                                <i class="fas fa-chevron-down text-sm"></i>
+                            </button>
+                            <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                                <a href="#" id="logoutBtn" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </header>
+            </header>
 
-        <!-- Main Content Area -->
-        <main class="p-6">
-            <!-- Header with Add Lead Button -->
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold text-gray-800">Lead Management</h1>
-                <button id="addLeadBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
-                    <i class="fas fa-plus mr-2"></i>Add New Lead
-                </button>
-            </div>
-
-            <!-- Filters and Search -->
-            <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                        <div class="relative">
-                            <input type="text" id="searchInput" placeholder="Search leads..." 
-                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                <i class="fas fa-search"></i>
-                            </span>
-                        </div>
+            <!-- Page Content -->
+            <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <!-- Page Header -->
+                <div class="md:flex md:items-center md:justify-between mb-6">
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                            Leads Management
+                        </h2>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select id="statusFilter" class="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">All Status</option>
-                            <option value="new">New</option>
-                            <option value="contacted">Contacted</option>
-                            <option value="qualified">Qualified</option>
-                            <option value="proposal">Proposal</option>
-                            <option value="negotiation">Negotiation</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-                        <select id="assignedFilter" class="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">All Agents</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
-                        <select id="sortBy" class="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="newest">Newest First</option>
-                            <option value="oldest">Oldest First</option>
-                            <option value="name">Name A-Z</option>
-                            <option value="value">Value High-Low</option>
-                        </select>
+                    <div class="mt-4 flex md:mt-0 md:ml-4">
+                        <button id="openModalBtn" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add New Lead
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Leads Table -->
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lead</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200" id="leadsTableBody">
-                        <!-- Table rows will be dynamically populated -->
-                    </tbody>
-                </table>
-            </div>
-        </main>
+                <!-- Leads Table -->
+                <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                    <table id="leadsTable" class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Company/Contact
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Contact Info
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Value
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="leadsTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Table rows will be dynamically added here -->
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
     </div>
 
     <!-- Add/Edit Lead Modal -->
-    <div id="leadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
-            <div class="flex justify-between items-center p-6 border-b">
-                <h2 class="text-xl font-semibold text-gray-800" id="modalTitle">Add New Lead</h2>
-                <button id="closeModal" class="text-gray-400 hover:text-gray-500">
+    <div id="addLeadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Add New Lead</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-500">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <form id="leadForm" class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form id="addLeadForm">
+                <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                        <input type="text" id="companyName" name="companyName" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-gray-700">Company Name</label>
+                        <input type="text" name="companyName" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                        <input type="text" id="contactPerson" name="contactPerson" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-gray-700">Contact Person</label>
+                        <input type="text" name="contactPerson" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="email" name="email" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" name="email" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <input type="tel" id="phone" name="phone" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-gray-700">Phone</label>
+                        <input type="tel" name="phone"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select id="status" name="status" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                        <select name="status" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="new">New</option>
                             <option value="contacted">Contacted</option>
                             <option value="qualified">Qualified</option>
@@ -190,23 +161,23 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Value</label>
-                        <input type="number" id="value" name="value" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-gray-700">Value</label>
+                        <input type="number" name="value" min="0" step="0.01" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <textarea id="notes" name="notes" rows="3"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Notes</label>
+                        <textarea name="notes" rows="3"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end space-x-4">
-                    <button type="button" id="cancelBtn"
-                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                <div class="mt-5 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">
                         Cancel
                     </button>
                     <button type="submit"
-                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md">
                         Save Lead
                     </button>
                 </div>
