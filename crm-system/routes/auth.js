@@ -1,46 +1,156 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const User = require('../models/User');
 
-// Mock user data (in a real app, this would be in a database)
-const users = [
-    { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
-    { id: 2, username: 'manager', password: 'manager123', role: 'manager' },
-    { id: 3, username: 'accountant', password: 'accountant123', role: 'accountant' },
-    { id: 4, username: 'sales1', password: 'sales123', role: 'sales_agent' }
-];
+// Generate JWT Token
+const generateToken = (id) => {
+    return jwt.sign({ id }, process.env.JWT_SECRET || 'your-secret-key', {
+        expiresIn: '30d',
+    });
+};
 
-// Login route
-router.post('/login', (req, res) => {
-    const { username, password } = req.body;
+// @route   POST /api/auth/register
+// @desc    Register a new user
+// @access  Public
+router.post('/register', async (req, res) => {
+    try {
+        const { username, password, email, name, role } = req.body;
 
-    // Find user
-    const user = users.find(u => u.username === username && u.password === password);
+        // Check if user already exists
+        const userExists = await User.findOne({ $or: [{ email }, { username }] });
+        if (userExists) {
+            return res.status(400).json({
+                success: false,
+                message: 'User already exists'
+            });
+        }
 
-    if (user) {
-        // In a real app, we would generate a JWT token here
-        res.json({
-            success: true,
-            user: {
-                id: user.id,
-                username: user.username,
-                role: user.role
-            }
+        // Create user
+        const user = await User.create({
+            username,
+            password,
+            email,
+            name,
+            role
         });
-    } else {
-        res.status(401).json({
+
+        if (user) {
+            res.status(201).json({
+                success: true,
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    name: user.name,
+                    role: user.role
+                },
+                token: generateToken(user._id)
+            });
+        }
+    } catch (error) {
+        res.status(400).json({
             success: false,
-            message: 'Invalid username or password'
+            message: error.message
         });
     }
 });
 
-// Logout route
-router.post('/logout', (req, res) => {
-    // In a real app, we would invalidate the JWT token here
-    res.json({
-        success: true,
-        message: 'Logged out successfully'
-    });
+// @route   POST /api/auth/login
+// @desc    Authenticate user & get token
+// @access  Public
+router.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        // Find user
+        const user = await User.findOne({ username });
+
+        if (user && (await user.matchPassword(password))) {
+            res.json({
+                success: true,
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    name: user.name,
+                    role: user.role
+                },
+                token: generateToken(user._id)
+            });
+        } else {
+            res.status(401).json({
+                success: false,
+                message: 'Invalid username or password'
+            });
+        }
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// @route   GET /api/auth/profile
+// @desc    Get user profile
+// @access  Private
+router.get('/profile', async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('-password');
+        res.json({
+            success: true,
+            user
+        });
+    } catch (error) {
+        res.status(404).json({
+            success: false,
+            message: 'User not found'
+        });
+    }
+});
+
+// @route   PUT /api/auth/profile
+// @desc    Update user profile
+// @access  Private
+router.put('/profile', async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            user.name = req.body.name || user.name;
+            user.email = req.body.email || user.email;
+            
+            if (req.body.password) {
+                user.password = req.body.password;
+            }
+
+            const updatedUser = await user.save();
+
+            res.json({
+                success: true,
+                user: {
+                    id: updatedUser._id,
+                    username: updatedUser.username,
+                    email: updatedUser.email,
+                    name: updatedUser.name,
+                    role: updatedUser.role
+                },
+                token: generateToken(updatedUser._id)
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
 });
 
 module.exports = router;
