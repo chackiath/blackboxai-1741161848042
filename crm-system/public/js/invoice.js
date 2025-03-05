@@ -23,31 +23,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default date to today
     invoiceDate.valueAsDate = new Date();
 
-    // Mock client data (in a real app, this would come from an API)
-    const clients = [
-        {
-            id: 1,
-            name: 'Tech Solutions Inc',
-            contact: 'John Smith',
-            email: 'john@techsolutions.com',
-            address: '123 Tech Street, Silicon Valley, CA 94025'
-        },
-        {
-            id: 2,
-            name: 'Digital Innovations',
-            contact: 'Sarah Johnson',
-            email: 'sarah@digitalinnovations.com',
-            address: '456 Innovation Ave, Boston, MA 02108'
-        }
-    ];
+    // Load and populate client select with leads
+    async function loadClients() {
+        try {
+            const response = await fetch('/api/leads', {
+                headers: {
+                    'Authorization': `Bearer ${user.token}`
+                }
+            });
+            const data = await response.json();
 
-    // Populate client select
-    clients.forEach(client => {
-        const option = document.createElement('option');
-        option.value = client.id;
-        option.textContent = client.name;
-        clientSelect.appendChild(option);
-    });
+            if (data.success) {
+                clientSelect.innerHTML = '<option value="">Select a client</option>';
+                data.leads.forEach(lead => {
+                    const option = document.createElement('option');
+                    option.value = lead.id;
+                    option.textContent = `${lead.companyName} (${lead.contactPerson})`;
+                    option.dataset.email = lead.email;
+                    option.dataset.phone = lead.phone || '';
+                    option.dataset.address = lead.address || '';
+                    clientSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading clients:', error);
+            alert('Error loading clients. Please try again.');
+        }
+    }
+
+    // Load clients on page load
+    loadClients();
 
     // Add line item
     function addLineItem() {
@@ -104,16 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Preview invoice
     function previewInvoice() {
-        const selectedClient = clients.find(c => c.id === parseInt(clientSelect.value));
-        if (!selectedClient) {
+        const selectedOption = clientSelect.options[clientSelect.selectedIndex];
+        if (!selectedOption.value) {
             alert('Please select a client');
             return;
         }
 
         // Update preview client information
-        document.getElementById('previewClientName').textContent = selectedClient.name;
-        document.getElementById('previewClientAddress').textContent = selectedClient.address;
-        document.getElementById('previewClientEmail').textContent = selectedClient.email;
+        document.getElementById('previewClientName').textContent = selectedOption.textContent;
+        document.getElementById('previewClientAddress').textContent = selectedOption.dataset.address || 'No address provided';
+        document.getElementById('previewClientEmail').textContent = selectedOption.dataset.email;
 
         // Update preview date
         document.getElementById('previewInvoiceDate').textContent = 'Date: ' + invoiceDate.value;
