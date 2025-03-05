@@ -1,175 +1,270 @@
 const express = require('express');
 const router = express.Router();
+const Lead = require('../models/Lead');
 
-// Mock leads data (in a real app, this would be in a database)
-let leads = [
-    {
-        id: 1,
-        companyName: 'Tech Solutions Inc',
-        contactPerson: 'John Smith',
-        email: 'john@techsolutions.com',
-        phone: '(555) 123-4567',
-        status: 'qualified',
-        value: 50000,
-        assignedTo: 'sales1',
-        notes: 'Interested in enterprise package',
-        createdAt: '2023-06-15'
-    },
-    {
-        id: 2,
-        companyName: 'Digital Innovations',
-        contactPerson: 'Sarah Johnson',
-        email: 'sarah@digitalinnovations.com',
-        phone: '(555) 987-6543',
-        status: 'contacted',
-        value: 25000,
-        assignedTo: 'sales2',
-        notes: 'Follow up scheduled for next week',
-        createdAt: '2023-06-16'
-    }
-];
+// @route   GET /api/leads
+// @desc    Get all leads
+// @access  Private
+router.get('/', async (req, res) => {
+    try {
+        const query = {};
+        
+        // Filter by status if provided
+        if (req.query.status) {
+            query.status = req.query.status;
+        }
 
-// Get all leads
-router.get('/', (req, res) => {
-    // In a real app, we would add pagination and filtering here
-    res.json({
-        success: true,
-        leads: leads
-    });
-});
+        // Filter by assigned agent if not admin/manager
+        if (req.user.role === 'sales_agent') {
+            query.assignedTo = req.user._id;
+        }
 
-// Get a single lead
-router.get('/:id', (req, res) => {
-    const lead = leads.find(l => l.id === parseInt(req.params.id));
-    
-    if (lead) {
+        // Add search functionality
+        if (req.query.search) {
+            query.$or = [
+                { companyName: { $regex: req.query.search, $options: 'i' } },
+                { contactPerson: { $regex: req.query.search, $options: 'i' } },
+                { email: { $regex: req.query.search, $options: 'i' } }
+            ];
+        }
+
+        const leads = await Lead.find(query)
+            .populate('assignedTo', 'username name')
+            .sort({ createdAt: -1 });
+
         res.json({
             success: true,
-            lead: lead
+            leads
         });
-    } else {
-        res.status(404).json({
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: 'Lead not found'
+            message: error.message
         });
     }
 });
 
-// Create a new lead
-router.post('/', (req, res) => {
-    const {
-        companyName,
-        contactPerson,
-        email,
-        phone,
-        status,
-        value,
-        assignedTo,
-        notes
-    } = req.body;
+// @route   GET /api/leads/:id
+// @desc    Get a single lead
+// @access  Private
+router.get('/:id', async (req, res) => {
+    try {
+        const lead = await Lead.findById(req.params.id)
+            .populate('assignedTo', 'username name')
+            .populate('history.updatedBy', 'username name');
 
-    // Validate required fields
-    if (!companyName || !contactPerson || !email) {
-        return res.status(400).json({
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: 'Lead not found'
+            });
+        }
+
+        // Check if user has access to this lead
+        if (req.user.role === 'sales_agent' && lead.assignedTo._id.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to access this lead'
+            });
+        }
+
+        res.json({
+            success: true,
+            lead
+        });
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: 'Company name, contact person, and email are required'
+            message: error.message
         });
     }
-
-    const newLead = {
-        id: leads.length + 1,
-        companyName,
-        contactPerson,
-        email,
-        phone,
-        status: status || 'new',
-        value: value || 0,
-        assignedTo,
-        notes,
-        createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    leads.unshift(newLead);
-
-    res.status(201).json({
-        success: true,
-        lead: newLead
-    });
 });
 
-// Update a lead
-router.put('/:id', (req, res) => {
-    const leadId = parseInt(req.params.id);
-    const leadIndex = leads.findIndex(l => l.id === leadId);
+// @route   POST /api/leads
+// @desc    Create a new lead
+// @access  Private
+router.post('/', async (req, res) => {
+    try {
+        const {
+            companyName,
+            contactPerson,
+            email,
+            phone,
+            status,
+            value,
+            notes
+        } = req.body;
 
-    if (leadIndex === -1) {
-        return res.status(404).json({
+        const lead = await Lead.create({
+            companyName,
+            contactPerson,
+            email,
+            phone,
+            status: status || 'new',
+            value: value || 0,
+            assignedTo: req.user._id,
+            notes,
+            history: [{
+                status: status || 'new',
+                updatedBy: req.user._id,
+                notes: 'Lead created'
+            }]
+        });
+
+        const populatedLead = await Lead.findById(lead._id)
+            .populate('assignedTo', 'username name')
+            .populate('history.updatedBy', 'username name');
+
+        res.status(201).json({
+            success: true,
+            lead: populatedLead
+        });
+    } catch (error) {
+        res.status(400).json({
             success: false,
-            message: 'Lead not found'
+            message: error.message
         });
     }
-
-    const updatedLead = {
-        ...leads[leadIndex],
-        ...req.body,
-        id: leadId // Ensure ID doesn't change
-    };
-
-    leads[leadIndex] = updatedLead;
-
-    res.json({
-        success: true,
-        lead: updatedLead
-    });
 });
 
-// Delete a lead
-router.delete('/:id', (req, res) => {
-    const leadId = parseInt(req.params.id);
-    const leadIndex = leads.findIndex(l => l.id === leadId);
+// @route   PUT /api/leads/:id
+// @desc    Update a lead
+// @access  Private
+router.put('/:id', async (req, res) => {
+    try {
+        const lead = await Lead.findById(req.params.id);
 
-    if (leadIndex === -1) {
-        return res.status(404).json({
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: 'Lead not found'
+            });
+        }
+
+        // Check if user has access to update this lead
+        if (req.user.role === 'sales_agent' && lead.assignedTo.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to update this lead'
+            });
+        }
+
+        // Add to history if status is changed
+        if (req.body.status && req.body.status !== lead.status) {
+            lead.history.push({
+                status: req.body.status,
+                updatedBy: req.user._id,
+                notes: req.body.notes || `Status changed to ${req.body.status}`
+            });
+        }
+
+        // Update lead fields
+        Object.keys(req.body).forEach(key => {
+            if (key !== 'history') {
+                lead[key] = req.body[key];
+            }
+        });
+
+        const updatedLead = await lead.save();
+        const populatedLead = await Lead.findById(updatedLead._id)
+            .populate('assignedTo', 'username name')
+            .populate('history.updatedBy', 'username name');
+
+        res.json({
+            success: true,
+            lead: populatedLead
+        });
+    } catch (error) {
+        res.status(400).json({
             success: false,
-            message: 'Lead not found'
+            message: error.message
         });
     }
-
-    leads = leads.filter(l => l.id !== leadId);
-
-    res.json({
-        success: true,
-        message: 'Lead deleted successfully'
-    });
 });
 
-// Update lead status (for Kanban board)
-router.patch('/:id/status', (req, res) => {
-    const leadId = parseInt(req.params.id);
-    const { status } = req.body;
+// @route   DELETE /api/leads/:id
+// @desc    Delete a lead
+// @access  Private (Admin/Manager only)
+router.delete('/:id', async (req, res) => {
+    try {
+        // Only admin and manager can delete leads
+        if (!['admin', 'manager'].includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to delete leads'
+            });
+        }
 
-    const leadIndex = leads.findIndex(l => l.id === leadId);
+        const lead = await Lead.findById(req.params.id);
 
-    if (leadIndex === -1) {
-        return res.status(404).json({
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: 'Lead not found'
+            });
+        }
+
+        await lead.remove();
+
+        res.json({
+            success: true,
+            message: 'Lead deleted successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: 'Lead not found'
+            message: error.message
         });
     }
+});
 
-    if (!status) {
-        return res.status(400).json({
+// @route   PATCH /api/leads/:id/status
+// @desc    Update lead status (for Kanban board)
+// @access  Private
+router.patch('/:id/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        const lead = await Lead.findById(req.params.id);
+
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: 'Lead not found'
+            });
+        }
+
+        // Check if user has access to update this lead
+        if (req.user.role === 'sales_agent' && lead.assignedTo.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to update this lead'
+            });
+        }
+
+        // Add to history
+        lead.history.push({
+            status,
+            updatedBy: req.user._id,
+            notes: req.body.notes || `Status changed to ${status}`
+        });
+
+        lead.status = status;
+        const updatedLead = await lead.save();
+
+        const populatedLead = await Lead.findById(updatedLead._id)
+            .populate('assignedTo', 'username name')
+            .populate('history.updatedBy', 'username name');
+
+        res.json({
+            success: true,
+            lead: populatedLead
+        });
+    } catch (error) {
+        res.status(400).json({
             success: false,
-            message: 'Status is required'
+            message: error.message
         });
     }
-
-    leads[leadIndex].status = status;
-
-    res.json({
-        success: true,
-        lead: leads[leadIndex]
-    });
 });
 
 module.exports = router;
