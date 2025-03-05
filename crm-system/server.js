@@ -129,7 +129,12 @@ app.post('/api/auth/login', (req, res) => {
 
 // Leads routes
 app.get('/api/leads', protect, (req, res) => {
-    res.json({ success: true, leads });
+    // Filter leads based on status
+    let filteredLeads = [...leads];
+    if (req.query.status) {
+        filteredLeads = filteredLeads.filter(lead => lead.status === req.query.status);
+    }
+    res.json({ success: true, leads: filteredLeads });
 });
 
 app.post('/api/leads', protect, (req, res) => {
